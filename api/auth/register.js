@@ -1,0 +1,55 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { sql, getRankFromPDL, cors, json } = require('../lib/db');
+const { JWT_SECRET } = require('../lib/auth');
+
+module.exports = async function handler(req, res) {
+  if (req.method === 'OPTIONS') {
+    cors(res);
+    return res.status(204).end();
+  }
+  if (req.method !== 'POST') {
+    return json(res, 405, { error: 'Method not allowed' });
+  }
+  if (!sql) {
+    return json(res, 503, { error: 'Banco não configurado (DATABASE_URL)' });
+  }
+  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+  const { username, email, password } = body;
+  if (!username || !password) {
+    return json(res, 400, { error: 'username e password são obrigatórios' });
+  }
+  if (username.length < 2 || username.length > 64) {
+    return json(res, 400, { error: 'username entre 2 e 64 caracteres' });
+  }
+  const hash = await bcrypt.hash(password, 10);
+  try {
+    const rows = await sql`
+      INSERT INTO accounts (username, email, password_hash)
+      VALUES (${username.trim()}, ${(email && email.trim()) || null}, ${hash})
+      RETURNING id, username, email, pdl, created_at
+    `;
+    const row = rows[0];
+    const token = jwt.sign(
+      { userId: row.id, username: row.username },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    return json(res, 201, {
+      token,
+      user: {
+        id: row.id,
+        username: row.username,
+        email: row.email,
+        pdl: row.pdl,
+        rank: getRankFromPDL(row.pdl),
+      },
+    });
+  } catch (e) {
+    if (e.code === '23505') {
+      return json(res, 409, { error: 'username ou email já em uso' });
+    }
+    console.error(e);
+    return json(res, 500, { error: 'Erro ao criar conta' });
+  }
+};

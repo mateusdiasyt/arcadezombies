@@ -1,0 +1,18 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (nunca commitar senhas)
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Logs e sistema
+*.log
+.DS_Store
+Thumbs.db
+
+# Opcional: descomente se o repositório ficar muito grande
+# ffdec/
+# ffdec.zip
+# extracted/
