@@ -3,13 +3,16 @@
   "version": "1.0.0",
   "description": "Zombie TD Reborn - jogo + API (Vercel + Neon)",
   "private": true,
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "build": "node scripts/copy-swf.js",
     "dev:api": "cd backend && npm run start"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.9.4",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3"
   }
 }

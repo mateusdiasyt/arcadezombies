@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { sql, getRankFromPDL, cors, json } = require('../lib/db');
+const { pool, getRankFromPDL, cors, json } = require('../lib/db');
 const { JWT_SECRET } = require('../lib/auth');
 
 module.exports = async function handler(req, res) {
@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return json(res, 405, { error: 'Method not allowed' });
   }
-  if (!sql) {
+  if (!pool) {
     return json(res, 503, { error: 'Banco não configurado (DATABASE_URL)' });
   }
   let body = req.body || {};
@@ -34,14 +34,15 @@ module.exports = async function handler(req, res) {
     return json(res, 500, { error: 'Erro ao processar senha' });
   }
   try {
-    const rows = await sql`
-      INSERT INTO accounts (username, email, password_hash)
-      VALUES (${username.trim()}, ${(email && email.trim()) || null}, ${hash})
-      RETURNING id, username, email, pdl, created_at
-    `;
-    const row = Array.isArray(rows) ? rows[0] : (rows && rows.rows ? rows.rows[0] : null);
+    const r = await pool.query(
+      `INSERT INTO accounts (username, email, password_hash)
+       VALUES ($1, $2, $3)
+       RETURNING id, username, email, pdl, created_at`,
+      [username.trim(), (email && email.trim()) || null, hash]
+    );
+    const row = r.rows && r.rows[0] ? r.rows[0] : null;
     if (!row) {
-      console.error('INSERT RETURNING sem linha:', rows);
+      console.error('INSERT RETURNING sem linha:', r.rows);
       return json(res, 500, { error: 'Erro ao criar conta' });
     }
     const token = jwt.sign(

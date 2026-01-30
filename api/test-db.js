@@ -4,13 +4,7 @@
  * Remover em produção se quiser.
  */
 
-const { neon } = require('@neondatabase/serverless');
-
-function cors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-}
+const { pool, cors } = require('./lib/db');
 
 module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') {
@@ -29,7 +23,7 @@ module.exports = async function handler(req, res) {
     nodeVersion: process.version,
   };
 
-  if (!process.env.DATABASE_URL) {
+  if (!pool) {
     cors(res);
     return res.status(200).json({
       ok: false,
@@ -39,13 +33,12 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const sql = neon(process.env.DATABASE_URL);
-    const rows = await sql`SELECT 1 as n, current_database() as db, current_user as usr`;
+    const r = await pool.query('SELECT 1 as n, current_database() as db, current_user as usr');
     cors(res);
     return res.status(200).json({
       ok: true,
       detail: 'Conexão OK',
-      debug: { ...debug, queryResult: rows },
+      debug: { ...debug, queryResult: r.rows },
     });
   } catch (e) {
     const message = e && e.message ? e.message : String(e);

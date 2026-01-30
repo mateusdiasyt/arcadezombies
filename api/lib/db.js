@@ -1,7 +1,11 @@
-const { neon } = require('@neondatabase/serverless');
+const { Pool } = require('pg');
 
-const sql = process.env.DATABASE_URL
-  ? neon(process.env.DATABASE_URL)
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL.includes('neon.tech') ? { rejectUnauthorized: true } : false,
+      max: 2,
+    })
   : null;
 
 const PDL_MIN = 0;
@@ -29,4 +33,4 @@ function json(res, status, data) {
   res.status(status).json(data);
 }
 
-module.exports = { sql, getRankFromPDL, PDL_MIN, PDL_MAX, cors, json };
+module.exports = { pool, getRankFromPDL, PDL_MIN, PDL_MAX, cors, json };

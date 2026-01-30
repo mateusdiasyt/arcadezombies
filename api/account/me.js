@@ -1,4 +1,4 @@
-const { sql, getRankFromPDL, cors, json } = require('../lib/db');
+const { pool, getRankFromPDL, cors, json } = require('../lib/db');
 const { getAuth } = require('../lib/auth');
 
 module.exports = async function handler(req, res) {
@@ -9,17 +9,18 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
     return json(res, 405, { error: 'Method not allowed' });
   }
-  if (!sql) {
+  if (!pool) {
     return json(res, 503, { error: 'Banco não configurado (DATABASE_URL)' });
   }
   const auth = getAuth(req);
   if (!auth) {
     return json(res, 401, { error: 'Token ausente ou inválido' });
   }
-  const rows = await sql`
-    SELECT id, username, email, pdl, created_at
-    FROM accounts WHERE id = ${auth.userId}
-  `;
+  const r = await pool.query(
+    'SELECT id, username, email, pdl, created_at FROM accounts WHERE id = $1',
+    [auth.userId]
+  );
+  const rows = r.rows;
   if (rows.length === 0) {
     return json(res, 404, { error: 'Conta não encontrada' });
   }
