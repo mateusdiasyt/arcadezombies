@@ -4,6 +4,7 @@ const { sql, getRankFromPDL, cors, json } = require('../lib/db');
 const { JWT_SECRET } = require('../lib/auth');
 
 module.exports = async function handler(req, res) {
+  try {
   if (req.method === 'OPTIONS') {
     cors(res);
     return res.status(204).end();
@@ -14,7 +15,10 @@ module.exports = async function handler(req, res) {
   if (!sql) {
     return json(res, 503, { error: 'Banco não configurado (DATABASE_URL)' });
   }
-  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+  let body = req.body || {};
+  if (typeof req.body === 'string') {
+    try { body = JSON.parse(req.body || '{}'); } catch (_) { body = {}; }
+  }
   const { username, email, password } = body;
   if (!username || !password) {
     return json(res, 400, { error: 'username e password são obrigatórios' });
@@ -63,6 +67,18 @@ module.exports = async function handler(req, res) {
       return json(res, 503, { error: 'Tabelas não criadas. Execute o schema na Neon (veja NEON_CRIAR_TABELAS.md).' });
     }
     console.error('register', e);
-    return json(res, 500, { error: 'Erro ao criar conta' });
+    return json(res, 500, {
+      error: 'Erro ao criar conta',
+      detail: e.message || String(e)
+    });
+  }
+  } catch (outer) {
+    console.error('register outer', outer);
+    cors(res);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.status(500).json({
+      error: 'Erro ao criar conta',
+      detail: outer.message || String(outer)
+    });
   }
 };
