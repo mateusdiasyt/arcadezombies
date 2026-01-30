@@ -1,9 +1,11 @@
 const { Pool } = require('pg');
 
-const pool = process.env.DATABASE_URL
+// Prefer UNPOOLED: no Vercel o host -pooler às vezes dá ENOTFOUND; o host direto pode resolver
+const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+const pool = connectionString
   ? new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL.includes('neon.tech') ? { rejectUnauthorized: true } : false,
+      connectionString,
+      ssl: connectionString.includes('neon.tech') ? { rejectUnauthorized: true } : false,
       max: 2,
     })
   : null;
