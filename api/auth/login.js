@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sql, getRankFromPDL, cors, json } = require('../lib/db');
 const { JWT_SECRET } = require('../lib/auth');

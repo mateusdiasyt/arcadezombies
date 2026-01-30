@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { sql, getRankFromPDL, cors, json } = require('../lib/db');
 const { JWT_SECRET } = require('../lib/auth');
@@ -22,14 +22,24 @@ module.exports = async function handler(req, res) {
   if (username.length < 2 || username.length > 64) {
     return json(res, 400, { error: 'username entre 2 e 64 caracteres' });
   }
-  const hash = await bcrypt.hash(password, 10);
+  let hash;
+  try {
+    hash = await bcrypt.hash(password, 10);
+  } catch (e) {
+    console.error('bcrypt.hash', e);
+    return json(res, 500, { error: 'Erro ao processar senha' });
+  }
   try {
     const rows = await sql`
       INSERT INTO accounts (username, email, password_hash)
       VALUES (${username.trim()}, ${(email && email.trim()) || null}, ${hash})
       RETURNING id, username, email, pdl, created_at
     `;
-    const row = rows[0];
+    const row = Array.isArray(rows) ? rows[0] : (rows && rows.rows ? rows.rows[0] : null);
+    if (!row) {
+      console.error('INSERT RETURNING sem linha:', rows);
+      return json(res, 500, { error: 'Erro ao criar conta' });
+    }
     const token = jwt.sign(
       { userId: row.id, username: row.username },
       JWT_SECRET,
@@ -49,7 +59,10 @@ module.exports = async function handler(req, res) {
     if (e.code === '23505') {
       return json(res, 409, { error: 'username ou email já em uso' });
     }
-    console.error(e);
+    if (e.code === '42P01' || (e.message && e.message.includes('does not exist'))) {
+      return json(res, 503, { error: 'Tabelas não criadas. Execute o schema na Neon (veja NEON_CRIAR_TABELAS.md).' });
+    }
+    console.error('register', e);
     return json(res, 500, { error: 'Erro ao criar conta' });
   }
 };
