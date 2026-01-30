@@ -14,16 +14,14 @@ if (-not (Test-Path "$root\zombie_td_reborn_modificado.swf")) {
     Write-Error "SWF nao foi gerado. Verifique o FFDec e extracted\scripts."
 }
 
-# 2. Copiar SWF para public/ (npm run build)
+# 2. Copiar SWF para public/
 Write-Host "`n=== 2/4 Copiando SWF para public ===" -ForegroundColor Cyan
-if (Test-Path "$root\package.json") {
-    npm run build 2>&1 | Out-Null
-    if (-not $?) { npm run build }
-} else {
-    node "$root\scripts\copy-swf.js"
-}
-if (-not (Test-Path "$root\public\zombie_td_reborn_modificado.swf")) {
-    Copy-Item "$root\zombie_td_reborn_modificado.swf" "$root\public\zombie_td_reborn_modificado.swf" -Force
+$swfSrc = Join-Path $root "zombie_td_reborn_modificado.swf"
+$swfDest = Join-Path $root "public\zombie_td_reborn_modificado.swf"
+if (-not (Test-Path "$root\public")) { New-Item -ItemType Directory -Path "$root\public" -Force | Out-Null }
+if (Test-Path $swfSrc) {
+    Copy-Item $swfSrc $swfDest -Force
+    Write-Host "SWF copiado para public/"
 }
 
 # 3. Git add e commit
