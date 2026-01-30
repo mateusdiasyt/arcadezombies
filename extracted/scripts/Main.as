@@ -44,7 +44,11 @@ package
          Localizer.Instance.update();
          Globals.tracker = new Tracker();
          Globals.tracker.setupAchievements();
-         Globals.showStartWorld();
+         var params:Object = stage && stage.loaderInfo ? stage.loaderInfo.parameters : null;
+         if(params && params["play"] == "1")
+            Globals.showGameWorld();
+         else
+            Globals.showStartWorld();
          super.init();
       }
       
